@@ -8,6 +8,7 @@ function MainPanel(props) {
   const [avgMonth, setAvgMonth] = useState(0.0);
 
   useEffect(() => {
+    if (!props.wallet.wallet_id) return;
     fetch(process.env.REACT_APP_API_ENDPOINT + '/member/stats?wallet_id=' + props.wallet.wallet_id, {
       credentials: 'include',
     })
