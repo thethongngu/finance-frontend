@@ -1,13 +1,20 @@
-import { useEffect } from "react";
-import { useState } from "react/cjs/react.development";
+import { useState } from "react";
+import { useSelector, useDispatch } from 'react-redux'
+
 import CategoryButton from "./CategoryButton";
+import { addNewTransaction } from "../state/transactionSlice"
 
 function TransactionForm(props) {
 
+  // internal state
   const [selectedCategoryID, setSelectedCategoryID] = useState(-1);
-  const [categories, setCategories] = useState([]);
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
+
+  // global state
+  const wallets = useSelector(state => state.wallet.value)
+  const categories = useSelector(state => state.category.value)
+  const dispatch = useDispatch()
 
   const selectAll = (e) => e.target.select();
 
@@ -19,7 +26,7 @@ function TransactionForm(props) {
         'Content-Type': 'application/json' 
       },
       body: JSON.stringify({
-        'wallet_id': props.wallet.wallet_id,
+        'wallet_id': wallets[0].wallet_id,
         'category_id': selectedCategoryID,
         'amount': parseInt(amount),
         'note': note
@@ -37,22 +44,13 @@ function TransactionForm(props) {
         setAmount('');
         setNote('');  
         setSelectedCategoryID(-1);
-        props.setNumTransactionAdded(props.numTransactionAdded + 1);
       }, 500);
-      
+      if (messageType) {
+        dispatch(addNewTransaction(data['transaction']));
+      }
     })
     
   }
-  
-  useEffect(() => {
-    fetch(process.env.REACT_APP_API_ENDPOINT + '/member/category', {
-      credentials: 'include'
-    })
-    .then(response => response.json())
-    .then(data => {
-      setCategories(data["category"])
-    })
-  }, []);
 
   return (
       <div className="h-9/12 max-w-screen-sm w-full rounded-lg flex flex-col items-center">

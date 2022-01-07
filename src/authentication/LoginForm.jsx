@@ -1,6 +1,11 @@
 import React from 'react';
+import { useDispatch } from 'react-redux'
+
+import { setUser } from '../state/userSlice'
 
 function LoginForm(props) {
+
+  const dispatch = useDispatch()
 
   let loginSuccess = false;
 
@@ -28,12 +33,12 @@ function LoginForm(props) {
         messageType: loginSuccess ? "success" : "error",
         messageContent: data["message"]
       })
-      props.setUser(data['user']);
+      dispatch(setUser(data['user']));
     })
   }
 
   return (
-    <div className="flex flex-col justify-center items-center w-full">
+    <div className="flex flex-col justify-center items-center w-full h-screen">
       <h2 className="mb-8 text-3xl">Finance</h2>
       <input id="username" type="text" className="text-xl mb-2 h-16 border-none decoration-transparent rounded-3xl text-center bg-cyan-100" placeholder="Username"/>
       <input id="password" type="password" className="text-xl mb-8 h-16 border-none decoration-transparent rounded-3xl text-center bg-cyan-100" placeholder="Password"/>

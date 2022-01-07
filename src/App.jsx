@@ -1,23 +1,30 @@
-import React, { useState } from 'react';
-import LoginForm from './LoginForm'
-import PopupMessage from './PopupMessage'
-import MainPanel from './MainPanel'
-import TransactionForm from './TransactionForm';
-import { useEffect } from 'react/cjs/react.development';
+import React, { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import LoginForm from './authentication/LoginForm'
+import PopupMessage from './common/PopupMessage'
+import MainPanel from './summary/MainPanel'
+import TransactionForm from './transaction/TransactionForm';
+import TransactionList from './transaction/TransactionList';
+
+import { setWallet } from './state/walletSlice'
+import { setCurrency } from './state/currencySlice'
+import { setCategory } from './state/categorySlice'
+import { setTransaction } from './state/transactionSlice'
+import { setUser } from './state/userSlice'
 
 
 function App() {
-  const [isLogin, setIsLogin] = useState(false);
-  const [popupState, setPopupState] = useState({
-    isVisible: false,
-    messageType: "success",
-    messageContent: ""
-  });
 
-  const [user, setUser] = useState({user_id: -1});
-  const [wallet, setWallet] = useState({});
-  const [currencies, setCurrencies] = useState([]);
-  const [numTransactionAdded, setNumTransactionAdded] = useState(false);
+  // global state
+  const wallets = useSelector(state => state.wallet.value)
+  const user = useSelector(state => state.user.value)
+  const dispatch = useDispatch()
+
+  // internal state
+  const [isLogin, setIsLogin] = useState(false);
+  const [popupState, setPopupState] = useState({isVisible: false, messageType: "success", messageContent: ""});
+
+  // -------------- script --------------
 
   function getWallet() {
     fetch(process.env.REACT_APP_API_ENDPOINT + '/member/wallet', {
@@ -28,8 +35,18 @@ function App() {
       return response.json()
     })
     .then(data => {
-      setWallet(data['wallets'][0]);
+      dispatch(setWallet(data['wallets']))
     });
+  }
+
+  function getCategory() {
+    fetch(process.env.REACT_APP_API_ENDPOINT + '/member/category', {
+      credentials: 'include'
+    })
+    .then(response => response.json())
+    .then(data => {
+      dispatch(setCategory(data['category']))
+    })
   }
 
   function getCurrency() {
@@ -40,7 +57,7 @@ function App() {
       return response.json()
     })
     .then(data => {
-      setCurrencies(data['currencies']);
+      dispatch(setCurrency(data['currencies']))
     });
   }
 
@@ -53,52 +70,61 @@ function App() {
       setIsLogin(response.status === 200);
       return response.json();
     })
-    .then(data => setUser(data['user']));
+    .then(data => {
+      dispatch(setUser(data['user']))
+    });
   }
 
-  useEffect(() => { 
-    if (user) {
-      getWallet();
-      getCurrency();
-    }
-  }, [user])
+  function getTodayTransaction() {
+    if (wallets.length <= 0) return;
+    fetch(process.env.REACT_APP_API_ENDPOINT + '/member/transaction?wallet_id=' + wallets[0].wallet_id, {
+      credentials: 'include',
+    })
+    .then(response => response.json())
+    .then(data => {
+      dispatch(setTransaction(data['transactions']))
+    })
+  }
 
   useEffect(() => {
     remember();
   }, []);
 
+  useEffect(() => { 
+    if (isLogin) {
+      getWallet();
+      getCurrency();
+      getCategory();
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (wallets.length > 0) {
+      getTodayTransaction();
+    }
+  }, [wallets])
+
+  // -------------- render --------------
+
+  let mainPage;
+  if (!isLogin) {
+    mainPage = <LoginForm setIsLogin={setIsLogin} setPopupState={setPopupState}/>
+  } else {  
+    mainPage = (
+      <div className="snap snap-y snap-mandatory overflow-y-scroll h-screen w-screen">
+        <div className="h-screen w-full items-center flex flex-col snap-start h-screen">
+          <MainPanel/>
+          <TransactionForm setPopupState={setPopupState}/>
+        </div>
+        <TransactionList/>
+      </div>
+    )
+  }
+
   return (
-    <div className="flex flex-col pt-8 text-center min-h-screen justify-center items-center">
-      {
-        popupState.isVisible && 
-        <PopupMessage 
-          popupState={popupState}
-          setPopupState={setPopupState}
-        />
-      }
-      {!isLogin 
-        ? 
-          <LoginForm 
-            setIsLogin={setIsLogin} 
-            setPopupState={setPopupState} 
-            setUser={setUser}/>
-        : 
-          <>
-            <MainPanel
-              wallet={wallet}
-              user={user}
-              currencies={currencies}
-              numTransactionAdded={numTransactionAdded}/>
-            <TransactionForm 
-              wallet={wallet}  
-              setPopupState={setPopupState}
-              setNumTransactionAdded={setNumTransactionAdded}
-              numTransactionAdded={numTransactionAdded}
-            />
-          </>
-      }
-      
-      
+    <div className="flex flex-col text-center justify-center items-center overflow-y-hidden">
+      {popupState.isVisible && <PopupMessage popupState={popupState} setPopupState={setPopupState}/>}
+      {mainPage}
     </div>
   );
 }
